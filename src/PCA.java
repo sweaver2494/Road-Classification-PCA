@@ -7,15 +7,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.Comparator;
 
 import javafx.util.Pair;
 
 public class PCA {
 
-	private static String FEATURE_FILE_PATH = "Data/FeatureFiles/features_0.csv";
-	//REDUCED_LENGTH is the desired number of principal components
-	private static int REDUCED_LENGTH = 10;
+	private static String FEATURE_FILE_PATH = "Data/FeatureFiles/training_data.csv";
 	
 	public static void main(String[] args) {
 		
@@ -26,29 +25,47 @@ public class PCA {
 		
 		if ((new File(FEATURE_FILE_PATH)).isFile()) {
 			String columnHeaders = readFeatureFile(FEATURE_FILE_PATH, featureData, featureClassification);
+			ArrayList<String> features = getColumnHeaders(columnHeaders);
 			
-			performPCA(featureData, featureClassification);
+			performPCA(featureData, features);
 		} else {
 			System.err.println("Feature File does not exist.");
 		}
 	}
 	
-	private static void performPCA(ArrayList<double[]> featureData, ArrayList<String> featureClassification) {
-		int dataSize = featureData.size();
+	private static void performPCA(ArrayList<double[]> featureData, ArrayList<String> features) {
 		int numFeatures = featureData.get(0).length;
 		double dataAverage[] = new double[numFeatures];
 		
 		getAverage(featureData, dataAverage);
-		
-    	ArrayList<Pair<Integer, Double>> covarianceList = new ArrayList<>();
-	    
-	    ArrayList<double[]> newData = PCAUtilities.performPCA(featureData, dataAverage, reducedLength, covarianceList);
-	    
-	    System.out.println();
-	    for (Pair<Integer, Double> item : covarianceList) {
-	    System.out.print(columnHeaders.get(item.getKey()) + "(" + item.getValue() + "), ");
+    	
+		double[][] covarianceMatrix = PCAUtilities.getCovarianceMatrix(featureData, dataAverage, numFeatures);
+    	ArrayList<Double> covarianceList = getPrincipalDiagonal(covarianceMatrix, numFeatures);
+    	ArrayList<Pair<Double,String>> covarianceFeatures = getFeatureCovariance(covarianceList, features);
+
+    	System.out.println();
+	    System.out.println("------------------------------");
+	    System.out.println("Covariance");
+	    for (Pair<Double,String> covariance : covarianceFeatures) {
+	    	System.out.println("Feature " + covariance.getValue() + ":\t\t" + covariance.getKey());
 	    }
+	    
+	    ArrayList<Double> eigenvalueList = PCAUtilities.getEigenvalueMatrix(covarianceMatrix, numFeatures);
+	    
 	    System.out.println();
+	    System.out.println("------------------------------");
+	    System.out.println("Eigenvalues");
+	    double totalSum = 0;
+	    for (Double eigenvalue : eigenvalueList) {
+	    	totalSum += eigenvalue;
+	    }
+	    int count = 0;
+	    double cumSum = 0;
+	    for (Double eigenvalue : eigenvalueList) {
+	    	cumSum += eigenvalue;
+	    	System.out.println("Eigenvalue " + count + ":\t" + eigenvalue + ",\t\tPercentage of sum: " + (cumSum / totalSum));
+	    	count++;
+	    }
 	}
 	
 	//dataAverage will contain the average value for each feature (column)
@@ -66,6 +83,51 @@ public class PCA {
 			dataAverage[i] /= dataSize;
 		}
 	}
+	
+	private static ArrayList<Double> getPrincipalDiagonal(double[][] matrix, int numFeatures) {
+		ArrayList<Double> principalDiagonal = new ArrayList<>(numFeatures);
+		
+		for (int i = 0; i < numFeatures; i++) {
+			principalDiagonal.add(Double.valueOf(matrix[i][i]));
+		}
+		
+		return principalDiagonal;
+	}
+	
+	private static ArrayList<Pair<Double,String>> getFeatureCovariance(ArrayList<Double> covarianceList, ArrayList<String> features) {
+		ArrayList<Pair<Double,String>> covarianceFeatures = new ArrayList<>();
+		
+		int index = 0;
+		for (Double covariance : covarianceList) {
+			covarianceFeatures.add(new Pair<Double,String>(covariance, features.get(index)));
+			index++;
+		}
+		
+        //sort the eigenvalues in descending order.
+        //the largest eigenvalue corresponds with the most significant (highest variance) principal component.
+        Collections.sort(covarianceFeatures, new Comparator<Pair<Double,String>>() {
+            @Override
+            public int compare(Pair<Double,String> cv1, Pair<Double,String> cv2) {
+                double covariance1 = cv1.getKey().doubleValue();
+                double covariance2 = cv2.getKey().doubleValue();
+                return (covariance1 == covariance2) ? 0 : (covariance1 < covariance2 ? 1 : -1);
+            }
+        });
+		
+		return covarianceFeatures;
+	}
+	
+    private static ArrayList<String> getColumnHeaders(String line) {
+    	ArrayList<String> columnHeaders = new ArrayList<>();
+    	
+    	String dataCompsStr[] = line.substring(line.indexOf(",") + 1).split(",");
+    	
+    	for (String feature : dataCompsStr) {
+    		columnHeaders.add(feature);
+    	}
+    	
+    	return columnHeaders;
+    }
 	
 	private static String readFeatureFile(String featureFilePath, ArrayList<double[]> featureData, ArrayList<String> featureClassification) {
 		String columnHeaders = "";
