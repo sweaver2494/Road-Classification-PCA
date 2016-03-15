@@ -3,8 +3,10 @@
  * @author Scott Weaver
  */
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,6 +17,7 @@ import javafx.util.Pair;
 public class PCA {
 
 	private static String FEATURE_FILE_PATH = "Data/FeatureFiles/training_data.csv";
+	private static String FEATURE_LIST_PATH = "Data/feature_list.txt";
 	
 	public static void main(String[] args) {
 		
@@ -46,8 +49,16 @@ public class PCA {
     	System.out.println();
 	    System.out.println("------------------------------");
 	    System.out.println("Covariance");
-	    for (Pair<Double,String> covariance : covarianceFeatures) {
-	    	System.out.println("Feature " + covariance.getValue() + ":\t\t" + covariance.getKey());
+	    try {
+	    	BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(FEATURE_LIST_PATH, true));
+	    	for (Pair<Double,String> covariance : covarianceFeatures) {
+	    		System.out.println("Feature " + covariance.getValue() + ":\t\t" + covariance.getKey());
+	    		bufferedWriter.write(covariance.getValue());
+	    		bufferedWriter.newLine();
+	    	}
+	    	bufferedWriter.close();
+	    } catch (IOException e) {
+	    	System.err.println("Unable to print ordered feature covariance list.");
 	    }
 	    
 	    ArrayList<Double> eigenvalueList = PCAUtilities.getEigenvalueMatrix(covarianceMatrix, numFeatures);
