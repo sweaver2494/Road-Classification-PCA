@@ -1,4 +1,7 @@
-/*
+/* For a set of training data, this file does two things:
+ * 1) Prints each of the features in descending order of covariance.
+ * 		Note: Also writes to a text file to be used in PcaKnn.java feature test
+ * 2) Prints each of the features in descending order of eigenvalues (variance of principal components).
  *
  * @author Scott Weaver
  */
