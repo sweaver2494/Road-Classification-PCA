@@ -19,7 +19,7 @@ import javafx.util.Pair;
 
 public class PCA {
 
-	private static String FEATURE_FILE_PATH = "Data/FeatureFiles/training_data.csv";
+	private static String FEATURE_FILE_PATH = "Data/TrainingData/training_data.csv";
 	private static String FEATURE_LIST_PATH = "Data/feature_list.txt";
 	
 	public static void main(String[] args) {
