@@ -1,7 +1,7 @@
 /* For a set of training data, this file does two things:
  * 1) Prints each of the features in descending order of covariance.
  * 		Note: Also writes to a text file to be used in PcaKnn.java feature test
- * 2) Prints each of the features in descending order of eigenvalues (variance of principal components).
+ * 2) Prints each of the principal components in descending order of eigenvalues (variance of principal components).
  *
  * @author Scott Weaver
  */
@@ -21,6 +21,7 @@ public class PCA {
 
 	private static String FEATURE_FILE_PATH = "Data/TrainingData/training_data.csv";
 	private static String FEATURE_LIST_PATH = "Data/feature_list.txt";
+    private static String RESULTS_FILE_PATH = "Data/results.csv";
 	
 	public static void main(String[] args) {
 		
@@ -28,18 +29,22 @@ public class PCA {
 		
 		ArrayList<double[]> featureData = new ArrayList<>();
 		ArrayList<String> featureClassification = new ArrayList<>();
+		ArrayList<String> resultsFeature = new ArrayList<>();
+		ArrayList<String> resultsComponent = new ArrayList<>();
 		
 		if ((new File(FEATURE_FILE_PATH)).isFile()) {
 			String columnHeaders = readFeatureFile(FEATURE_FILE_PATH, featureData, featureClassification);
 			ArrayList<String> features = getColumnHeaders(columnHeaders);
 			
-			performPCA(featureData, features);
+			performPCA(featureData, features, resultsFeature, resultsComponent);
+			
+			writeResultsFile(RESULTS_FILE_PATH, resultsFeature, resultsComponent);
 		} else {
 			System.err.println("Feature File does not exist.");
 		}
 	}
 	
-	private static void performPCA(ArrayList<double[]> featureData, ArrayList<String> features) {
+	private static void performPCA(ArrayList<double[]> featureData, ArrayList<String> features, ArrayList<String> resultsFeature, ArrayList<String> resultsComponent) {
 		int numFeatures = featureData.get(0).length;
 		double dataAverage[] = new double[numFeatures];
 		
@@ -52,10 +57,17 @@ public class PCA {
     	System.out.println();
 	    System.out.println("------------------------------");
 	    System.out.println("Covariance");
+	    double totalSum = 0;
+	    for (Pair<Double,String> covariance : covarianceFeatures) {
+    		totalSum += covariance.getKey();
+    	}
+	    double cumSum = 0;
 	    try {
 	    	BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(FEATURE_LIST_PATH, true));
 	    	for (Pair<Double,String> covariance : covarianceFeatures) {
-	    		System.out.println("Feature " + covariance.getValue() + ":\t\t" + covariance.getKey());
+	    		cumSum += covariance.getKey();
+	    		System.out.println("Feature " + covariance.getValue() + ":\t" + covariance.getKey()  + ",\t\tPercentage of sum: " + (cumSum / totalSum));
+	    		resultsFeature.add(covariance.getValue() + "," + String.valueOf(covariance.getKey())  + "," + String.valueOf((cumSum / totalSum)));
 	    		bufferedWriter.write(covariance.getValue());
 	    		bufferedWriter.newLine();
 	    	}
@@ -69,15 +81,16 @@ public class PCA {
 	    System.out.println();
 	    System.out.println("------------------------------");
 	    System.out.println("Eigenvalues");
-	    double totalSum = 0;
+	    totalSum = 0;
 	    for (Double eigenvalue : eigenvalueList) {
 	    	totalSum += eigenvalue;
 	    }
-	    int count = 0;
-	    double cumSum = 0;
+	    int count = 1;
+	    cumSum = 0;
 	    for (Double eigenvalue : eigenvalueList) {
 	    	cumSum += eigenvalue;
-	    	System.out.println("Eigenvalue " + count + ":\t" + eigenvalue + ",\t\tPercentage of sum: " + (cumSum / totalSum));
+	    	System.out.println("Principal Component " + count + ":\t" + eigenvalue + ",\t\tPercentage of sum: " + (cumSum / totalSum));
+	    	resultsComponent.add(String.valueOf(count) + "," + String.valueOf(eigenvalue)  + "," + String.valueOf((cumSum / totalSum)));
 	    	count++;
 	    }
 	}
@@ -179,5 +192,24 @@ public class PCA {
         }
 		
 		return columnHeaders;
-	}	
+	}
+	
+	private static void writeResultsFile(String filePath, ArrayList<String> resultsFeature, ArrayList<String> resultsComponent) {
+		
+		try {
+			BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(filePath, true));
+			
+			bufferedWriter.write("Principal Features,,,Principal Components");
+			bufferedWriter.newLine();
+			bufferedWriter.write("Feature,Covariance,Cum Percentage,Component,Eigenvalue,Cum Percentage");
+			bufferedWriter.newLine();
+			for (int i = 0; i < resultsFeature.size(); i++) {
+				bufferedWriter.write(resultsFeature.get(i) + "," + resultsComponent.get(i));
+				bufferedWriter.newLine();
+			}
+			bufferedWriter.close();
+		} catch (IOException e) {
+			System.err.println("Cannot write results file. " + e.getMessage());
+		}
+	}
 }
